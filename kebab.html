@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="uk" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Розклад занять МНАУ</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            900: '#14532d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .glass-panel {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .pulse-live {
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+            animation: pulse-green 2s infinite;
+        }
+        @keyframes pulse-green {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { transform: scale(1.01); box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-300 pb-12">
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-3">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center font-bold text-xl shadow-lg shadow-emerald-500/20">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight tracking-tight">Розклад МНАУ</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Група А1/2 • Автовизначення дзвінків</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <!-- Bells Schedule Modal Trigger -->
+                <button onclick="toggleModal('bells-modal')" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition text-slate-600 dark:text-slate-300">
+                    <i class="fa-regular fa-clock text-lg"></i>
+                </button>
+                
+                <!-- JSON Editor Modal Trigger -->
+                <button onclick="toggleModal('json-modal')" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition text-slate-600 dark:text-slate-300">
+                    <i class="fa-solid fa-code text-lg"></i>
+                </button>
+
+                <!-- Theme Switcher -->
+                <button id="theme-toggle" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition text-amber-500 dark:text-amber-400">
+                    <i class="fa-solid fa-moon dark:hidden text-lg"></i>
+                    <i class="fa-solid fa-sun hidden dark:block text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 pt-6">
+
+        <!-- Banner: Current Time Status -->
+        <div id="status-card" class="mb-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-3 bg-white/20 backdrop-blur-md rounded-xl">
+                    <i class="fa-solid fa-clock text-2xl"></i>
+                </div>
+                <div>
+                    <div id="live-clock" class="text-2xl font-bold tracking-wider">00:00:00</div>
+                    <div id="live-status-text" class="text-sm font-medium text-emerald-100">Завантаження статусу...</div>
+                </div>
+            </div>
+            <div id="timer-badge" class="px-3.5 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-xs font-semibold tracking-wide self-end sm:self-center">
+                Таймер...
+            </div>
+        </div>
+
+        <!-- Controls Block -->
+        <div class="flex flex-col gap-4 mb-6">
+            <!-- Numer / Denumer Switcher -->
+            <div class="grid grid-cols-2 p-1.5 bg-slate-200/70 dark:bg-slate-900 rounded-2xl border border-slate-300/40 dark:border-slate-800">
+                <button id="btn-numer" onclick="setWeekType('numer')" class="py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-calculator text-xs"></i> Чисельник
+                </button>
+                <button id="btn-denumer" onclick="setWeekType('denumer')" class="py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-divide text-xs"></i> Знаменник
+                </button>
+            </div>
+
+            <!-- Days Navigation -->
+            <div class="flex items-center justify-between gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                <button onclick="setDay('monday')" data-day="monday" class="day-btn flex-1 min-w-[64px] py-3 rounded-xl flex flex-col items-center gap-1 font-semibold text-xs transition border border-transparent">
+                    <span>ПН</span>
+                    <span class="text-[10px] opacity-70">Пон</span>
+                </button>
+                <button onclick="setDay('tuesday')" data-day="tuesday" class="day-btn flex-1 min-w-[64px] py-3 rounded-xl flex flex-col items-center gap-1 font-semibold text-xs transition border border-transparent">
+                    <span>ВТ</span>
+                    <span class="text-[10px] opacity-70">Вів</span>
+                </button>
+                <button onclick="setDay('wednesday')" data-day="wednesday" class="day-btn flex-1 min-w-[64px] py-3 rounded-xl flex flex-col items-center gap-1 font-semibold text-xs transition border border-transparent">
+                    <span>СР</span>
+                    <span class="text-[10px] opacity-70">Сре</span>
+                </button>
+                <button onclick="setDay('thursday')" data-day="thursday" class="day-btn flex-1 min-w-[64px] py-3 rounded-xl flex flex-col items-center gap-1 font-semibold text-xs transition border border-transparent">
+                    <span>ЧТ</span>
+                    <span class="text-[10px] opacity-70">Чет</span>
+                </button>
+                <button onclick="setDay('friday')" data-day="friday" class="day-btn flex-1 min-w-[64px] py-3 rounded-xl flex flex-col items-center gap-1 font-semibold text-xs transition border border-transparent">
+                    <span>ПТ</span>
+                    <span class="text-[10px] opacity-70">Пят</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Schedule Cards Container -->
+        <div id="schedule-container" class="space-y-4">
+            <!-- Dynamic Schedule Cards will be injected here -->
+        </div>
+
+    </main>
+
+    <!-- Modal: Bells Schedule Reference -->
+    <div id="bells-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
+            <div class="flex justify-between items-center mb-5">
+                <h3 class="text-lg font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-bell text-emerald-500"></i> Розклад звонків МНАУ
+                </h3>
+                <button onclick="toggleModal('bells-modal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div class="space-y-6">
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-2 flex items-center gap-1">
+                        <i class="fa-solid fa-building"></i> Головний / Корпус №1 / Корпус №5 / ГНК
+                    </h4>
+                    <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 divide-y divide-slate-200/50 dark:divide-slate-700/50 text-sm">
+                        <div class="flex justify-between py-1.5"><span>1 пара</span><span class="font-mono font-medium">08:30 – 09:50</span></div>
+                        <div class="flex justify-between py-1.5"><span>2 пара</span><span class="font-mono font-medium">10:05 – 11:25</span></div>
+                        <div class="flex justify-between py-1.5"><span>3 пара</span><span class="font-mono font-medium">11:55 – 13:15</span></div>
+                        <div class="flex justify-between py-1.5"><span>4 пара</span><span class="font-mono font-medium">13:30 – 14:50</span></div>
+                        <div class="flex justify-between py-1.5"><span>5 пара</span><span class="font-mono font-medium">15:05 – 16:25</span></div>
+                        <div class="flex justify-between py-1.5"><span>6 пара</span><span class="font-mono font-medium">16:40 – 18:00</span></div>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400 mb-2 flex items-center gap-1">
+                        <i class="fa-solid fa-building-user"></i> Корпус №2 (НК 2)
+                    </h4>
+                    <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 divide-y divide-slate-200/50 dark:divide-slate-700/50 text-sm">
+                        <div class="flex justify-between py-1.5"><span>1 пара</span><span class="font-mono font-medium">09:00 – 10:20</span></div>
+                        <div class="flex justify-between py-1.5"><span>2 пара</span><span class="font-mono font-medium">10:35 – 11:55</span></div>
+                        <div class="flex justify-between py-1.5"><span>3 пара</span><span class="font-mono font-medium">12:25 – 13:45</span></div>
+                        <div class="flex justify-between py-1.5"><span>4 пара</span><span class="font-mono font-medium">14:00 – 15:20</span></div>
+                        <div class="flex justify-between py-1.5"><span>5 пара</span><span class="font-mono font-medium">15:35 – 16:55</span></div>
+                        <div class="flex justify-between py-1.5"><span>6 пара</span><span class="font-mono font-medium">17:10 – 18:30</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Custom JSON Editor -->
+    <div id="json-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-brackets-curly text-emerald-500"></i> Данні расписания (JSON)
+                </h3>
+                <button onclick="toggleModal('json-modal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <p class="text-xs text-slate-500 mb-3">Ви можете редагувати або вставити оновлений JSON з розкладом вашої групи:</p>
+            <textarea id="json-input" class="w-full h-64 p-3 bg-slate-900 text-emerald-400 font-mono text-xs rounded-xl border border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+            <div class="flex justify-end gap-3 mt-4">
+                <button onclick="resetJSON()" class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold text-xs hover:bg-slate-200 dark:hover:bg-slate-700">Скинути</button>
+                <button onclick="saveJSON()" class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-semibold text-xs hover:bg-emerald-500 shadow-md">Зберегти та оновити</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Default JSON provided by user
+        const defaultScheduleData = {
+            "sched": {
+                "info": {},
+                "numer": {
+                    "monday": [
+                        {"num":"1","lesson":"вікно","teacher":"","room":""},
+                        {"num":"2","lesson":"Фізика","teacher":"Чурило Р.С.","room":"209(нк 2)"},
+                        {"num":"3","lesson":"вікно","teacher":"","room":""},
+                        {"num":"4","lesson":"Іноземна мова","teacher":"Саламатіна О.О.","room":"216(нк 2)"},
+                        {"num":"5","lesson":"Фізичне виховання","teacher":"","room":"зал(нк 1)"}
+                    ],
+                    "tuesday": [
+                        {"num":"1","lesson":"Фізика","teacher":"Вахонина Л","room":"108(нк 2)"},
+                        {"num":"2","lesson":"вікно","teacher":"","room":""},
+                        {"num":"3","lesson":"Хімія","teacher":"Гирля Л.М.","room":"304(нк 2)"},
+                        {"num":"4","lesson":"Хімія","teacher":"Гирля Л.М.","room":"113(нк 1)"}
+                    ],
+                    "wednesday": [
+                        {"num":"1","lesson":"вікно","teacher":"","room":""},
+                        {"num":"2","lesson":"Основи Національного Супротиву","teacher":"Болотських С.В.","room":""},
+                        {"num":"3","lesson":"кур.год.","teacher":"","room":"нк1"},
+                        {"num":"4","lesson":"Латинська мова","teacher":"Пономаренко Н.Г.","room":"203 (нк 5)"}
+                    ],
+                    "thursday": [
+                        {"num":"1","lesson":"Введеня до майбутньої професії","teacher":"Дробітько А.В.","room":"304(нк 1)"},
+                        {"num":"2","lesson":"Безпека життєдіяльності","teacher":"Мардзявко К.О.","room":"219(нк 2)"},
+                        {"num":"3","lesson":"Основи Національного Супротиву","teacher":"Болотських С.В.","room":"004(нк 2)"},
+                        {"num":"4","lesson":"Фізика","teacher":"Чурило Р.С.","room":"209(нк 2)"}
+                    ],
+                    "friday": [
+                        {"num":"1","lesson":"Ботаніка","teacher":"Терещенко А.В.","room":"310(нк 1)"},
+                        {"num":"2","lesson":"Ботаніка ","teacher":"Миколайчук В.Г.","room":"304(нк 1)"},
+                        {"num":"3","lesson":"Українська мова","teacher":"Доній В.С.","room":"213(гнк)"},
+                        {"num":"4","lesson":"Основи Національного Супротиву","teacher":"Болотських С.В.","room":"301/303(нк 5)"}
+                    ]
+                },
+                "denumer": {
+                    "monday": [
+                        {"num":"1","lesson":"Психологія","teacher":"Улітіна К.А.","room":"301(нк 2)"},
+                        {"num":"2","lesson":"Психологія","teacher":"Улітіна К.А.","room":"301(нк 2)"},
+                        {"num":"3","lesson":"вікно","teacher":"","room":""},
+                        {"num":"4","lesson":"Іноземна мова","teacher":"Саламатіна О.О.","room":"216(нк 2)"},
+                        {"num":"5","lesson":"Фізичне виховання","teacher":"","room":""}
+                    ],
+                    "tuesday": [
+                        {"num":"2","lesson":"вікно","teacher":"","room":""},
+                        {"num":"2","lesson":"вікно","teacher":"","room":""},
+                        {"num":"3","lesson":"Українська мова","teacher":"Доній В.С.","room":"312(нк 1)"},
+                        {"num":"4","lesson":"Хімія","teacher":"Гирля Л.М.","room":"113(нк 1)"}
+                    ],
+                    "wednesday": [
+                        {"num":"1","lesson":"вікно","teacher":"","room":""},
+                        {"num":"2","lesson":"Основи Національного Супротиву","teacher":"Болотських С.В.","room":""},
+                        {"num":"3","lesson":"кур.год.","teacher":"","room":"нк1"},
+                        {"num":"4","lesson":"Латинська мова","teacher":"Пономаренко Н.Г.","room":"203 (нк 5)"}
+                    ],
+                    "thursday": [
+                        {"num":"1","lesson":"Введеня до майбутньої професії","teacher":"Дробітько А.В.","room":"304(нк 1)"},
+                        {"num":"2","lesson":"Безпека життєдіяльності","teacher":"Мардзявко К.О.","room":"219(нк 2)"},
+                        {"num":"3","lesson":"Основи Національного Супротиву","teacher":"Болотських С.В.","room":"004(нк 2)"},
+                        {"num":"4","lesson":"Безпека життєдіяльності","teacher":"Мардзявко К.О.","room":"108(нк 2)"}
+                    ],
+                    "friday": [
+                        {"num":"1","lesson":"Ботаніка","teacher":"Терещенко А.В.","room":"310(нк 1)"},
+                        {"num":"2","lesson":"Ботаніка ","teacher":"Миколайчук В.Г.","room":"304(нк 1)"},
+                        {"num":"3","lesson":"Українська мова","teacher":"Доній В.С.","room":"213(гнк)"}
+                    ]
+                }
+            },
+            "dataBaseVer": "01.09.2022"
+        };
+
+        // Bells Schedules Definition
+        const BELLS_DEFAULT = {
+            "1": { start: "08:30", end: "09:50" },
+            "2": { start: "10:05", end: "11:25" },
+            "3": { start: "11:55", end: "13:15" },
+            "4": { start: "13:30", end: "14:50" },
+            "5": { start: "15:05", end: "16:25" },
+            "6": { start: "16:40", end: "18:00" }
+        };
+
+        const BELLS_BUILDING_2 = {
+            "1": { start: "09:00", end: "10:20" },
+            "2": { start: "10:35", end: "11:55" },
+            "3": { start: "12:25", end: "13:45" },
+            "4": { start: "14:00", end: "15:20" },
+            "5": { start: "15:35", end: "16:55" },
+            "6": { start: "17:10", end: "18:30" }
+        };
+
+        // App State
+        let currentSchedule = JSON.parse(localStorage.getItem('mnau_schedule')) || defaultScheduleData;
+        let selectedWeekType = 'numer'; // 'numer' or 'denumer'
+        let selectedDay = getCurrentDayKey();
+
+        // Helper: Get Current Day Key
+        function getCurrentDayKey() {
+            const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+            const dayName = days[new Date().getDay()];
+            return (dayName === 'sunday' || dayName === 'saturday') ? 'monday' : dayName;
+        }
+
+        // Helper: Determine dynamic bell times based on classroom room string
+        function getPairTime(num, roomStr) {
+            const isBuilding2 = roomStr && (roomStr.toLowerCase().includes('нк 2') || roomStr.toLowerCase().includes('нк2'));
+            const bellTable = isBuilding2 ? BELLS_BUILDING_2 : BELLS_DEFAULT;
+            const timeInfo = bellTable[num] || { start: "--:--", end: "--:--" };
+            return {
+                ...timeInfo,
+                buildingName: isBuilding2 ? 'Корпус №2' : 'Головний/НК1/НК5'
+            };
+        }
+
+        // UI Handlers
+        function setWeekType(type) {
+            selectedWeekType = type;
+            document.getElementById('btn-numer').className = type === 'numer' 
+                ? 'py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-md'
+                : 'py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200';
+            
+            document.getElementById('btn-denumer').className = type === 'denumer' 
+                ? 'py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-md'
+                : 'py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200';
+            
+            renderSchedule();
+        }
+
+        function setDay(dayKey) {
+            selectedDay = dayKey;
+            document.querySelectorAll('.day-btn').forEach(btn => {
+                const isActive = btn.getAttribute('data-day') === dayKey;
+                btn.className = isActive 
+                    ? 'day-btn flex-1 min-w-[64px] py-3 rounded-xl flex flex-col items-center gap-1 font-semibold text-xs transition bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 border border-emerald-500'
+                    : 'day-btn flex-1 min-w-[64px] py-3 rounded-xl flex flex-col items-center gap-1 font-semibold text-xs transition bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700';
+            });
+            renderSchedule();
+        }
+
+        // Time calculations for live status & highlight
+        function parseTimeToMinutes(timeStr) {
+            const [h, m] = timeStr.split(':').map(Number);
+            return h * 60 + m;
+        }
+
+        function renderSchedule() {
+            const container = document.getElementById('schedule-container');
+            const dayLessons = currentSchedule.sched[selectedWeekType]?.[selectedDay] || [];
+
+            if (dayLessons.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800">
+                        <i class="fa-solid fa-mug-hot text-4xl text-emerald-500 mb-3 opacity-60"></i>
+                        <p class="font-semibold text-slate-600 dark:text-slate-400">В цей день немає пар. Відпочивайте!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const now = new Date();
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            const isToday = getCurrentDayKey() === selectedDay;
+
+            container.innerHTML = dayLessons.map(item => {
+                const isWindow = item.lesson.trim().toLowerCase() === 'вікно';
+                const pairTime = getPairTime(item.num, item.room);
+                
+                const startMinutes = parseTimeToMinutes(pairTime.start);
+                const endMinutes = parseTimeToMinutes(pairTime.end);
+
+                let statusBadge = '';
+                let cardStyle = 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800';
+
+                if (isToday) {
+                    if (currentMinutes >= startMinutes && currentMinutes <= endMinutes) {
+                        // Ongoing pair
+                        cardStyle = 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-500 dark:border-emerald-500/50 pulse-live';
+                        statusBadge = `<span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500 text-white tracking-wide uppercase"><i class="fa-solid fa-play text-[9px] mr-1"></i> Зараз іде</span>`;
+                    } else if (currentMinutes > endMinutes) {
+                        // Completed pair
+                        cardStyle = 'bg-slate-100/60 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 opacity-60';
+                        statusBadge = `<span class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-200 dark:bg-slate-800 text-slate-500">Завершено</span>`;
+                    } else {
+                        // Upcoming pair
+                        statusBadge = `<span class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-400">Очікується</span>`;
+                    }
+                }
+
+                if (isWindow) {
+                    return `
+                        <div class="p-4 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 flex items-center justify-between opacity-60 bg-slate-50/50 dark:bg-slate-900/20">
+                            <div class="flex items-center gap-3">
+                                <span class="w-8 h-8 rounded-xl bg-slate-200 dark:bg-slate-800 font-bold text-xs flex items-center justify-center">${item.num}</span>
+                                <div>
+                                    <div class="font-semibold text-sm">Вікно (Вільний час)</div>
+                                    <div class="text-xs text-slate-400">${pairTime.start} – ${pairTime.end}</div>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-coffee text-slate-400"></i>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="p-5 rounded-2xl border ${cardStyle} shadow-sm transition-all duration-200 relative overflow-hidden">
+                        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-3">
+                            <div class="flex items-center gap-3">
+                                <span class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-sm flex items-center justify-center border border-emerald-500/20">
+                                    ${item.num}
+                                </span>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-mono text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                                            ${pairTime.start} – ${pairTime.end}
+                                        </span>
+                                        <span class="text-[10px] text-slate-400 px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800">
+                                            ${pairTime.buildingName}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>${statusBadge}</div>
+                        </div>
+
+                        <div class="pl-0 sm:pl-12">
+                            <h3 class="text-base font-bold text-slate-900 dark:text-white mb-2">${item.lesson}</h3>
+                            <div class="flex flex-wrap items-center gap-y-2 gap-x-4 text-xs text-slate-500 dark:text-slate-400">
+                                ${item.teacher ? `
+                                    <span class="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300">
+                                        <i class="fa-solid fa-user-tie text-emerald-500"></i> ${item.teacher}
+                                    </span>
+                                ` : ''}
+                                ${item.room ? `
+                                    <span class="flex items-center gap-1.5 font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                        <i class="fa-solid fa-location-dot text-emerald-500"></i> Аудиторія: ${item.room}
+                                    </span>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Live Clock & Status Counter
+        function updateLiveStatus() {
+            const now = new Date();
+            const timeStr = now.toTimeString().split(' ')[0];
+            document.getElementById('live-clock').innerText = timeStr;
+
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            const dayKey = getCurrentDayKey();
+            const dayLessons = currentSchedule.sched[selectedWeekType]?.[dayKey] || [];
+
+            let activeText = "Навчальні пари завершено";
+            let timerText = "Відпочинок";
+
+            for (let i = 0; i < dayLessons.length; i++) {
+                const item = dayLessons[i];
+                if (item.lesson.trim().toLowerCase() === 'вікно') continue;
+
+                const pairTime = getPairTime(item.num, item.room);
+                const startM = parseTimeToMinutes(pairTime.start);
+                const endM = parseTimeToMinutes(pairTime.end);
+
+                if (currentMinutes >= startM && currentMinutes <= endM) {
+                    const diff = endM - currentMinutes;
+                    activeText = `Зараз: ${item.num}-а пара (${item.lesson})`;
+                    timerText = `До кінця пари: ${diff} хв`;
+                    break;
+                } else if (currentMinutes < startM) {
+                    const diff = startM - currentMinutes;
+                    activeText = `Наступна: ${item.num}-а пара (${item.lesson})`;
+                    timerText = `Через: ${diff} хв`;
+                    break;
+                }
+            }
+
+            document.getElementById('live-status-text').innerText = activeText;
+            document.getElementById('timer-badge').innerText = timerText;
+        }
+
+        // Theme Toggle Handler
+        const themeToggle = document.getElementById('theme-toggle');
+        themeToggle.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        });
+
+        if (localStorage.getItem('theme') === 'light') {
+            document.documentElement.classList.remove('dark');
+        }
+
+        // Modal Controls
+        function toggleModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.toggle('hidden');
+
+            if (id === 'json-modal' && !modal.classList.contains('hidden')) {
+                document.getElementById('json-input').value = JSON.stringify(currentSchedule, null, 2);
+            }
+        }
+
+        function saveJSON() {
+            try {
+                const val = document.getElementById('json-input').value;
+                const parsed = JSON.parse(val);
+                currentSchedule = parsed;
+                localStorage.setItem('mnau_schedule', JSON.stringify(parsed));
+                toggleModal('json-modal');
+                renderSchedule();
+            } catch (e) {
+                alert('Некоректний формат JSON!');
+            }
+        }
+
+        function resetJSON() {
+            currentSchedule = defaultScheduleData;
+            localStorage.removeItem('mnau_schedule');
+            document.getElementById('json-input').value = JSON.stringify(defaultScheduleData, null, 2);
+            renderSchedule();
+            toggleModal('json-modal');
+        }
+
+        // Initialization
+        window.onload = function() {
+            setWeekType('numer');
+            setDay(getCurrentDayKey());
+            updateLiveStatus();
+            setInterval(updateLiveStatus, 1000);
+        };
+    </script>
+</body>
+</html>
