@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!--  я щас заплачу нахуй это просто пиздец я никогда больше не булу ничего такого трогать-->
 <html lang="uk" class="dark">
 <head>
     <meta charset="UTF-8">
@@ -149,7 +150,7 @@
         <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800">
             <div class="flex justify-between items-center mb-5">
                 <h3 class="text-lg font-bold flex items-center gap-2">
-                    <i class="fa-solid fa-bell text-emerald-500"></i> Розклад звонків МНАУ
+                    <i class="fa-solid fa-bell text-emerald-500"></i> Розклад дзвінків МНАУ
                 </h3>
                 <button onclick="toggleModal('bells-modal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
                     <i class="fa-solid fa-xmark text-xl"></i>
@@ -304,14 +305,20 @@
         // App State
         let currentSchedule = JSON.parse(localStorage.getItem('mnau_schedule')) || defaultScheduleData;
         let selectedWeekType = 'numer'; // 'numer' or 'denumer'
-        let selectedDay = getCurrentDayKey();
 
-        // Helper: Get Current Day Key
-        function getCurrentDayKey() {
+        // Helper: Get Real Current Day Key
+        function getActualDayKey() {
             const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-            const dayName = days[new Date().getDay()];
-            return (dayName === 'sunday' || dayName === 'saturday') ? 'monday' : dayName;
+            return days[new Date().getDay()];
         }
+
+        // Helper: Default selected day (Monday if weekend, otherwise today)
+        function getDefaultDayKey() {
+            const real = getActualDayKey();
+            return (real === 'sunday' || real === 'saturday') ? 'monday' : real;
+        }
+
+        let selectedDay = getDefaultDayKey();
 
         // Helper: Determine dynamic bell times based on classroom room string
         function getPairTime(num, roomStr) {
@@ -371,7 +378,8 @@
 
             const now = new Date();
             const currentMinutes = now.getHours() * 60 + now.getMinutes();
-            const isToday = getCurrentDayKey() === selectedDay;
+            const realDay = getActualDayKey();
+            const isToday = (realDay === selectedDay);
 
             container.innerHTML = dayLessons.map(item => {
                 const isWindow = item.lesson.trim().toLowerCase() === 'вікно';
@@ -396,6 +404,8 @@
                         // Upcoming pair
                         statusBadge = `<span class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-400">Очікується</span>`;
                     }
+                } else {
+                    statusBadge = `<span class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-400">За розкладом</span>`;
                 }
 
                 if (isWindow) {
@@ -461,30 +471,42 @@
             document.getElementById('live-clock').innerText = timeStr;
 
             const currentMinutes = now.getHours() * 60 + now.getMinutes();
-            const dayKey = getCurrentDayKey();
-            const dayLessons = currentSchedule.sched[selectedWeekType]?.[dayKey] || [];
+            const realDay = getActualDayKey();
+            const isWeekend = (realDay === 'sunday' || realDay === 'saturday');
 
-            let activeText = "Навчальні пари завершено";
+            let activeText = "Сьогодні вихідний день ☕";
             let timerText = "Відпочинок";
 
-            for (let i = 0; i < dayLessons.length; i++) {
-                const item = dayLessons[i];
-                if (item.lesson.trim().toLowerCase() === 'вікно') continue;
+            if (!isWeekend) {
+                const dayLessons = currentSchedule.sched[selectedWeekType]?.[realDay] || [];
+                let foundActive = false;
 
-                const pairTime = getPairTime(item.num, item.room);
-                const startM = parseTimeToMinutes(pairTime.start);
-                const endM = parseTimeToMinutes(pairTime.end);
+                for (let i = 0; i < dayLessons.length; i++) {
+                    const item = dayLessons[i];
+                    if (item.lesson.trim().toLowerCase() === 'вікно') continue;
 
-                if (currentMinutes >= startM && currentMinutes <= endM) {
-                    const diff = endM - currentMinutes;
-                    activeText = `Зараз: ${item.num}-а пара (${item.lesson})`;
-                    timerText = `До кінця пари: ${diff} хв`;
-                    break;
-                } else if (currentMinutes < startM) {
-                    const diff = startM - currentMinutes;
-                    activeText = `Наступна: ${item.num}-а пара (${item.lesson})`;
-                    timerText = `Через: ${diff} хв`;
-                    break;
+                    const pairTime = getPairTime(item.num, item.room);
+                    const startM = parseTimeToMinutes(pairTime.start);
+                    const endM = parseTimeToMinutes(pairTime.end);
+
+                    if (currentMinutes >= startM && currentMinutes <= endM) {
+                        const diff = endM - currentMinutes;
+                        activeText = `Зараз: ${item.num}-а пара (${item.lesson})`;
+                        timerText = `До кінця пари: ${diff} хв`;
+                        foundActive = true;
+                        break;
+                    } else if (currentMinutes < startM) {
+                        const diff = startM - currentMinutes;
+                        activeText = `Наступна: ${item.num}-а пара (${item.lesson})`;
+                        timerText = `Через: ${diff} хв`;
+                        foundActive = true;
+                        break;
+                    }
+                }
+
+                if (!foundActive) {
+                    activeText = "Навчальні пари завершено";
+                    timerText = "Відпочинок";
                 }
             }
 
@@ -537,7 +559,7 @@
         // Initialization
         window.onload = function() {
             setWeekType('numer');
-            setDay(getCurrentDayKey());
+            setDay(selectedDay);
             updateLiveStatus();
             setInterval(updateLiveStatus, 1000);
         };
